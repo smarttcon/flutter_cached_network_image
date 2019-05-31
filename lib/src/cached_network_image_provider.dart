@@ -17,7 +17,7 @@ class CachedNetworkImageProvider
   const CachedNetworkImageProvider(this.url,
       {this.minWidth: 1920,
       this.minHeight: 1080,
-      this.quality: 95,
+      this.quality: 70,
       this.rotate: 0,
       this.scale: 1.0,
       this.errorListener,
