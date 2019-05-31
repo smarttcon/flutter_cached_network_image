@@ -6,6 +6,7 @@ import 'dart:ui' as ui show instantiateImageCodec, Codec;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 typedef void ErrorListener();
 
@@ -14,9 +15,21 @@ class CachedNetworkImageProvider
   /// Creates an ImageProvider which loads an image from the [url], using the [scale].
   /// When the image fails to load [errorListener] is called.
   const CachedNetworkImageProvider(this.url,
-      {this.scale: 1.0, this.errorListener, this.headers, this.cacheManager})
+      {this.minWidth: 1920,
+      this.minHeight: 1080,
+      this.quality: 95,
+      this.rotate: 0,
+      this.scale: 1.0,
+      this.errorListener,
+      this.headers,
+      this.cacheManager})
       : assert(url != null),
         assert(scale != null);
+
+  final int minWidth;
+  final int minHeight;
+  final int quality;
+  final int rotate;
 
   final BaseCacheManager cacheManager;
 
@@ -41,17 +54,7 @@ class CachedNetworkImageProvider
   @override
   ImageStreamCompleter load(CachedNetworkImageProvider key) {
     return new MultiFrameImageStreamCompleter(
-      codec: _loadAsync(key),
-      scale: key.scale,
-// TODO enable information collector on next stable release of flutter
-//      informationCollector: () sync* {
-//        yield DiagnosticsProperty<ImageProvider>(
-//          'Image provider: $this \n Image key: $key',
-//          this,
-//          style: DiagnosticsTreeStyle.errorProperty,
-//        );
-//      },
-    );
+        codec: _loadAsync(key), scale: key.scale);
   }
 
   Future<ui.Codec> _loadAsync(CachedNetworkImageProvider key) async {
@@ -67,14 +70,19 @@ class CachedNetworkImageProvider
   Future<ui.Codec> _loadAsyncFromFile(
       CachedNetworkImageProvider key, File file) async {
     assert(key == this);
-
-    final Uint8List bytes = await file.readAsBytes();
-
+    Uint8List bytes = await file.readAsBytes();
     if (bytes.lengthInBytes == 0) {
       if (errorListener != null) errorListener();
       throw new Exception("File was empty");
+    } else {
+      bytes = await FlutterImageCompress.compressWithList(
+        bytes,
+        minHeight: minHeight,
+        minWidth: minWidth,
+        quality: quality,
+        rotate: rotate,
+      );
     }
-
     return await ui.instantiateImageCodec(bytes);
   }
 
